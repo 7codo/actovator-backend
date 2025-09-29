@@ -1,0 +1,39 @@
+name: CI/CD to Azure Container Apps
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build & deploy to Container App
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          appSourcePath: .
+          acrName: actovatorregistry
+          containerAppName: actovator-backend
+          resourceGroup: actovator
+      - name: Apply missing env vars via CLI
+        run: |
+          az containerapp update \
+            --name actovator-backend \
+            --resource-group actovator \
+            --set-env-vars \
+              AZURE_API_KEY="${{ secrets.AZURE_API_KEY }}" \
+              AZURE_ENDPOINT="${{ secrets.AZURE_ENDPOINT }}" \
+              DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+              FRONTEND_APP_URL="${{ secrets.FRONTEND_APP_URL }}" \
+              CHROMA_TENANT="${{ secrets.CHROMA_TENANT }}" \
+              CHROMA_DATABASE="${{ secrets.CHROMA_DATABASE }}" \
+              CHROMA_API_KEY="${{ secrets.CHROMA_API_KEY }}" \
+              GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
+              GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}"
