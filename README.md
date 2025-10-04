@@ -8,4 +8,4 @@ $principalId = az containerapp show -n actovator-backend -g actovator --query id
 
 az containerapp registry set --name actovator-backend --resource-group actovator --server actovatorregistry.azurecr.io --identity system
 
-## az ad sp create-for-rbac --name "actovator" --role contributor --scopes /subscriptions/d52146ae-f113-4eaa-807f-037c91531fe6/resourceGroups/actovator --sdk-auth
+az ad sp create-for-rbac --name "github-action-sp" --role contributor --scopes /subscriptions/d52146ae-f113-4eaa-807f-037c91531fe6/resourceGroups/actovator --sdk-auth

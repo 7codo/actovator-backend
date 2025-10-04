@@ -47,7 +47,7 @@ def search_analytics(
     row_limit: int = 25000,
     startDate: Optional[str] = None,
     endDate: Optional[str] = None,
-    dimensions: Optional[str] = None,
+    dimensions: Optional[str] = None,  # Accept as comma-separated string
     country_to_filter_by: Optional[str] = None,
     device_to_filter_by: Optional[str] = None,
     keyword_to_filter_by: Optional[str] = None,
@@ -59,18 +59,23 @@ def search_analytics(
     Retrieve Google Search Console analytics data for a given site.
 
     This endpoint fetches search analytics data such as queries, clicks, impressions, CTR, and position
-    for the specified site and date range. You can customize the results by selecting a dimension
-    (e.g., "query", "page", "country", or "device") and by applying optional filters.
+    for the specified site and date range. You can customize the results by selecting one or more dimensions
+    (e.g., "query", "page,country", etc.) and by applying optional filters.
     """
     user_id = session.user_id
     try:
+        if dimensions is None or dimensions.strip() == "":
+            dimensions_list = ["date"]
+        else:
+            dimensions_list = [d.strip() for d in dimensions.split(",") if d.strip()]
+
         service = get_service(user_id, db=db)
         rows = get_search_analytics(
             site_url=site_url,
             row_limit=row_limit,
             startDate=startDate,
             endDate=endDate,
-            dimensions=dimensions,
+            dimensions=dimensions_list,
             country_to_filter_by=country_to_filter_by,
             device_to_filter_by=device_to_filter_by,
             keyword_to_filter_by=keyword_to_filter_by,
@@ -82,7 +87,7 @@ def search_analytics(
             user_id=user_id,
             site_url=site_url,
             row_count=len(rows),
-            dimensions=dimensions,
+            dimensions=dimensions_list,
             filters={
                 "country": country_to_filter_by,
                 "device": device_to_filter_by,

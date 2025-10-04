@@ -1,5 +1,4 @@
 from pprint import pprint
-import re
 
 from sqlmodel import Session
 
@@ -21,53 +20,29 @@ class SearchAnalyticsRow(BaseModel):
     position: float = Field(..., description="Average position for this row.")
 
 
-def _extract_domain(site_url: str) -> str:
-    """
-    Extract the domain from a GSC siteUrl, e.g.:
-    - 'sc-domain:actovator.com' -> 'actovator.com'
-    - 'https://www.example.com/' -> 'www.example.com'
-    """
-    if site_url.startswith("sc-domain:"):
-        return site_url[len("sc-domain:") :]
-    # Remove protocol and trailing slash
-    match = re.match(r"https?://([^/]+)/?", site_url)
-    if match:
-        return match.group(1)
-    return site_url
-
-
-def _favicon_url(domain: str) -> str:
-    """
-    Return a favicon URL for the given domain.
-    Uses Google's favicon service.
-    """
-    return f"https://www.google.com/s2/favicons?domain={domain}"
-
-
 def list_sites(service):
     site_list = service.sites().list().execute()
     sites = []
     for site in site_list.get("siteEntry", []):
         site_url = site.get("siteUrl", "")
-        domain = _extract_domain(site_url)
-        favicon_url = _favicon_url(domain)
-        sites.append(
-            {
-                "siteUrl": site_url,
-                "permissionLevel": site.get("permissionLevel"),
-                "faviconUrl": favicon_url,
-            }
-        )
+        if site_url.startswith("https"):
+            site_url_no_slash = site_url.rstrip("/")
+            sites.append(
+                {
+                    "siteUrl": site_url_no_slash,
+                    "faviconUrl": f"{site_url_no_slash}/favicon.co",
+                }
+            )
     return sites
 
 
 def get_search_analytics(
+    service,
     site_url: str,
-    startDate: str = None,
+    startDate: str,
+    endDate: str,
     row_limit: int = 25000,
-    service=None,
-    endDate: str = None,
-    dimensions: str = None,
+    dimensions: list[str] = ["date"],
     country_to_filter_by: Optional[str] = None,
     device_to_filter_by: Optional[str] = None,
     keyword_to_filter_by: Optional[str] = None,
@@ -90,11 +65,6 @@ def get_search_analytics(
     Returns:
         List[SearchAnalyticsRow]: List of analytics rows, each with keys: 'clicks', 'ctr', 'impressions', 'keys', 'position'.
     """
-    # Default to ["date"] or ["date", dimensions]
-    if dimensions is None or dimensions == "date":
-        dimensions_list = ["date"]
-    else:
-        dimensions_list = ["date", dimensions]
 
     # If row_limit is None or 0, fetch all rows in batches of 25000
     MAX_BATCH_SIZE = 25000
@@ -114,7 +84,7 @@ def get_search_analytics(
         request = {
             "startDate": startDate,
             "endDate": endDate,
-            "dimensions": dimensions_list,
+            "dimensions": dimensions,
             "rowLimit": batch_limit,
             "startRow": start_row,
         }
@@ -161,6 +131,12 @@ if __name__ == "__main__":
         service = get_service("gAf7wNMxd93mxhCHqZRZIVXtgcbwNHNz", db=session)
         # sites = list_sites(service)
 
-        result = list_sites(service)
+        result = get_search_analytics(
+            service,
+            "knz-ma3lomati.blogspot.com",
+            "2024-12-11",
+            "2025-01-01",
+            dimensions="query",
+        )
         # sites = get_search_analytics("actovator.com", service=service)
         pprint(result, indent=3)
